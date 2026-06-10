@@ -1,5 +1,5 @@
 const express = require('express');
-const mysql = require('mysql2');
+const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
@@ -9,22 +9,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const db = mysql.createConnection({
-  host: process.env.DB_HOST || 'sql107.infinityfree.com',
-  user: process.env.DB_USER || 'if0_42151313',
-  password: process.env.DB_PASSWORD || 'GCcUtx0lF8',
-  database: process.env.DB_NAME || 'if0_42151313_shoe_shop',
-});
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
 
-db.connect((err) => {
-  if (err) {
-    console.error('Database connection failed:', err);
-    process.exit(1);
-  }
-  console.log('Connected to MySQL database');
-});
-
-const JWT_SECRET = 'shoe_shop_jwt_secret_key_2024';
+const JWT_SECRET = process.env.JWT_SECRET || 'shoe_shop_jwt_secret_key_2024';
 
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -45,18 +35,25 @@ app.post('/api/register', async (req, res) => {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    const [existing] = await db.promise().query('SELECT id FROM users WHERE email = ?', [email]);
-    if (existing.length > 0) {
+    const { data: existing } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (existing) {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const [result] = await db.promise().query(
-      'INSERT INTO users (fullname, email, phonenumber, address, password) VALUES (?, ?, ?, ?, ?)',
-      [fullname, email, phonenumber, address, hashedPassword]
-    );
+    const { data, error } = await supabase
+      .from('users')
+      .insert({ fullname, email, phonenumber, address, password: hashedPassword })
+      .select('id')
+      .single();
 
-    res.status(201).json({ message: 'User registered successfully', userId: result.insertId });
+    if (error) throw error;
+    res.status(201).json({ message: 'User registered successfully', userId: data.id });
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -70,12 +67,17 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const [users] = await db.promise().query('SELECT * FROM users WHERE email = ?', [email]);
-    if (users.length === 0) {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!user) {
       return res.status(400).json({ error: 'Invalid email or password' });
     }
 
-    const user = users[0];
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
       return res.status(400).json({ error: 'Invalid email or password' });
@@ -96,14 +98,17 @@ app.post('/api/login', async (req, res) => {
 
 app.get('/api/profile', authenticateToken, async (req, res) => {
   try {
-    const [users] = await db.promise().query(
-      'SELECT id, fullname, email, phonenumber, address, created_at FROM users WHERE id = ?',
-      [req.user.id]
-    );
-    if (users.length === 0) {
+    const { data: profile, error } = await supabase
+      .from('users')
+      .select('id, fullname, email, phonenumber, address, created_at')
+      .eq('id', req.user.id)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!profile) {
       return res.status(404).json({ error: 'User not found' });
     }
-    res.json(users[0]);
+    res.json(profile);
   } catch (error) {
     console.error('Profile error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -112,7 +117,12 @@ app.get('/api/profile', authenticateToken, async (req, res) => {
 
 app.get('/api/products', async (req, res) => {
   try {
-    const [products] = await db.promise().query('SELECT * FROM products ORDER BY created_at DESC');
+    const { data: products, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
     res.json(products);
   } catch (error) {
     console.error('Products error:', error);
