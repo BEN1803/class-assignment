@@ -13,12 +13,6 @@ export default function ProductsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/");
-      return;
-    }
-
     const userData = localStorage.getItem("user");
     if (userData) {
       setUser(JSON.parse(userData));
@@ -34,12 +28,12 @@ export default function ProductsPage() {
         setError("Failed to load products");
         setLoading(false);
       });
-  }, [router]);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    router.push("/");
+    setUser(null);
   };
 
   if (loading) {
@@ -55,25 +49,42 @@ export default function ProductsPage() {
       <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <h1 className="text-2xl font-bold text-indigo-600">Shoe Shop</h1>
+            <Link href="/products" className="text-2xl font-bold text-indigo-600">Shoe Shop</Link>
             <div className="flex items-center gap-4">
-              {user && (
-                <span className="text-gray-600 text-sm hidden sm:block">
-                  Welcome, {user.fullname}
-                </span>
+              {user ? (
+                <>
+                  <span className="text-gray-600 text-sm hidden sm:block">
+                    Welcome, {user.fullname}
+                  </span>
+                  <Link
+                    href="/profile"
+                    className="text-gray-600 hover:text-indigo-600 font-medium text-sm"
+                  >
+                    Profile
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="text-gray-600 hover:text-indigo-600 font-medium text-sm"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
+                  >
+                    Register
+                  </Link>
+                </>
               )}
-              <Link
-                href="/profile"
-                className="text-gray-600 hover:text-indigo-600 font-medium text-sm"
-              >
-                Profile
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition"
-              >
-                Logout
-              </button>
             </div>
           </div>
         </div>
@@ -109,7 +120,7 @@ export default function ProductsPage() {
                 </span>
                 <h3 className="mt-2 font-semibold text-gray-800">{product.name}</h3>
                 <p className="text-sm text-gray-500 mt-1 line-clamp-2">{product.description}</p>
-                <p className="mt-3 text-xl font-bold text-indigo-600">${parseFloat(product.price).toFixed(2)}</p>
+                <p className="mt-3 text-xl font-bold text-indigo-600">Tsh {parseFloat(product.price).toFixed(2)}</p>
               </div>
             </div>
           ))}

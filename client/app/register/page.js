@@ -56,7 +56,7 @@ export default function RegisterPage() {
       }
 
       setSuccess("Account created successfully! Redirecting to login...");
-      setTimeout(() => router.push("/"), 1500);
+      setTimeout(() => router.push("/login"), 1500);
     } catch {
       setError("Server error. Please try again.");
     } finally {
@@ -174,7 +174,7 @@ export default function RegisterPage() {
 
         <p className="text-center mt-6 text-sm text-gray-500">
           Already have an account?{" "}
-          <Link href="/" className="text-indigo-600 font-medium hover:underline">
+          <Link href="/login" className="text-indigo-600 font-medium hover:underline">
             Sign In
           </Link>
         </p>

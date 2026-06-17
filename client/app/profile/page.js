@@ -39,7 +39,7 @@ export default function ProfilePage() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    router.push("/");
+    router.push("/products");
   };
 
   if (loading) {
